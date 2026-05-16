@@ -17,7 +17,7 @@ public final class MolangLexer {
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("[\n\t]");
 
     public static Token[] createTokens(String input) throws MolangSyntaxException {
-        StringReader reader = new StringReader(WHITESPACE_PATTERN.matcher(input).replaceAll(""));
+        StringReader reader = new StringReader(preprocess(input));
         List<Token> tokens = new ArrayList<>();
 
         while (reader.canRead()) {
@@ -39,6 +39,39 @@ public final class MolangLexer {
         }
 
         return tokens.toArray(Token[]::new);
+    }
+
+    // Treats newlines as soft statement separators: appends ';' to the end of any
+    // non-empty line that doesn't already end on a continuation token. Preserves the
+    // historical contract of stripping tabs and (now) newlines from the raw input.
+    private static String preprocess(String input) {
+        String stripped = input.replace("\r", "").replace("\t", "");
+        if (stripped.indexOf('\n') < 0) {
+            return stripped;
+        }
+        String[] lines = stripped.split("\n", -1);
+        StringBuilder sb = new StringBuilder(stripped.length() + lines.length);
+        for (String rawLine : lines) {
+            String line = rawLine.strip();
+            if (line.isEmpty()) {
+                continue;
+            }
+            sb.append(line);
+            char last = line.charAt(line.length() - 1);
+            if (!isLineContinuation(last)) {
+                sb.append(';');
+            }
+        }
+        return sb.toString();
+    }
+
+    private static boolean isLineContinuation(char c) {
+        return switch (c) {
+            case ';', '{', '(', ',', '.',
+                 '+', '-', '*', '/',
+                 '<', '>', '=', '!', '&', '|', '?', ':' -> true;
+            default -> false;
+        };
     }
 
     private static Token getToken(StringReader reader) {

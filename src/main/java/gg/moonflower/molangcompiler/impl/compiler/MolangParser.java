@@ -318,31 +318,34 @@ public final class MolangParser {
     }
 
     private static Node parseAlphanumeric(TokenReader reader) throws MolangSyntaxException {
-        expectLength(reader, 2);
+        expectLength(reader, 1);
 
-        // object.name
-        String object = reader.peek().value();
-        if ("t".equalsIgnoreCase(object)) {
-            object = "temp";
-        }
-
-        reader.skip();
-        expect(reader, MolangLexer.TokenType.DOT);
+        // object.name OR bare name (implicit temp.<name>)
+        String firstToken = reader.peek().value();
         reader.skip();
 
-        expect(reader, MolangLexer.TokenType.ALPHANUMERIC);
-        StringBuilder nameBuilder = new StringBuilder(reader.peek().value());
-        reader.skip();
-        while (reader.canRead()) {
-            MolangLexer.Token token = reader.peek();
-            if (!token.type().validVariableName()) {
-                break;
-            }
-            nameBuilder.append(token.value());
+        String object;
+        String name;
+        if (reader.canRead() && reader.peek().type() == MolangLexer.TokenType.DOT) {
+            object = "t".equalsIgnoreCase(firstToken) ? "temp" : firstToken;
             reader.skip();
-        }
 
-        String name = nameBuilder.toString();
+            expect(reader, MolangLexer.TokenType.ALPHANUMERIC);
+            StringBuilder nameBuilder = new StringBuilder(reader.peek().value());
+            reader.skip();
+            while (reader.canRead()) {
+                MolangLexer.Token token = reader.peek();
+                if (!token.type().validVariableName()) {
+                    break;
+                }
+                nameBuilder.append(token.value());
+                reader.skip();
+            }
+            name = nameBuilder.toString();
+        } else {
+            object = "temp";
+            name = firstToken;
+        }
 
         MathOperation mathOperation = parseMathOperation(object, name, reader);
         if (mathOperation != null && mathOperation.getParameters() == 0) {

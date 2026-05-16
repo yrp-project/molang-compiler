@@ -387,6 +387,103 @@ public class MolangTest {
     }
 
     @Test
+    void testUserWithTempPrefix() throws MolangException {
+        MolangCompiler compiler = MolangCompiler.create();
+        MolangExpression expression = compiler.compile("""
+                t.tt = q.anim_time
+                t.ts = q.anim_time - 3
+                v.ydiag_factor = 0.7
+                v.xdiag_factor = 0.4
+                v.z3.t = q.anim_time - 4
+                v.z3.diag.x = -2 - (v.z3.t * v.xdiag_factor)
+                v.z3.diag.y = -5 + (v.z3.t * v.ydiag_factor)
+                v.z3.x = (-v.z3.t*0.5 + math.sin(v.z3.t * 120 + 60) * 0.2 + v.z3.diag.x)
+                """);
+        MolangRuntime runtime = MolangRuntime.runtime().setQuery("anim_time", 5).create();
+        System.out.println("result = " + runtime.resolve(expression));
+    }
+
+    @Test
+    void testUserClaimedWorks() throws MolangException {
+        MolangCompiler compiler = MolangCompiler.create();
+        MolangExpression expression = compiler.compile("""
+                tt = q.anim_time
+                ts = q.anim_time - 3
+
+                v.ydiag_factor = 0.7
+                v.xdiag_factor = 0.4
+
+                v.z3.t = q.anim_time - 4
+                v.z3.diag.x = -2 - (v.z3.t * v.xdiag_factor)
+                v.z3.diag.y = -5 + (v.z3.t * v.ydiag_factor)
+                v.z3.x = (-v.z3.t*0.5 + math.sin(v.z3.t * 120 + 60) * 0.2 + v.z3.diag.x)
+                """);
+        MolangRuntime runtime = MolangRuntime.runtime().setQuery("anim_time", 5).create();
+        System.out.println("result = " + runtime.resolve(expression));
+    }
+
+    @Test
+    void testNestedVariableNoSemicolons() throws MolangException {
+        MolangCompiler compiler = MolangCompiler.create();
+        // Exact user input: no semicolons, just newlines
+        MolangExpression expression = compiler.compile("""
+                tt = q.anim_time
+                ts = q.anim_time - 3
+
+                v.ydiag_factor = 0.7
+                v.xdiag_factor = 0.4
+
+                v.z1.t = q.anim_time
+                v.z1.diag.x = -2 - (v.z1.t * v.xdiag_factor)
+                v.z1.diag.y = -5 + (v.z1.t * v.ydiag_factor)
+                v.z1.x = (-v.z1.t*0.5 + math.sin(v.z1.t * 120) * 0.2 + v.z1.diag.x)
+
+                v.z2.t = q.anim_time - 2
+                v.z2.diag.x = -2 - (v.z2.t * v.xdiag_factor)
+                v.z2.diag.y = -5 + (v.z2.t * v.ydiag_factor)
+                v.z2.x = (-v.z2.t*0.5 + math.sin(v.z2.t * 120) * 0.2 + v.z2.diag.x)
+
+                v.z3.t = q.anim_time - 4
+                v.z3.diag.x = -2 - (v.z3.t * v.xdiag_factor)
+                v.z3.diag.y = -5 + (v.z3.t * v.ydiag_factor)
+                v.z3.x = (-v.z3.t*0.5 + math.sin(v.z3.t * 120 + 60) * 0.2 + v.z3.diag.x)
+                """);
+
+        MolangRuntime runtime = MolangRuntime.runtime()
+                .setQuery("anim_time", 5)
+                .create();
+        float result = runtime.resolve(expression);
+        System.out.println("result = " + result);
+    }
+
+    @Test
+    void testNestedVariableAcrossStatements() throws MolangException {
+        MolangCompiler compiler = MolangCompiler.create();
+        MolangExpression expression = compiler.compile("""
+                v.ydiag_factor = 0.7;
+                v.xdiag_factor = 0.4;
+                v.z1.t = q.anim_time;
+                v.z1.diag.x = -2 - (v.z1.t * v.xdiag_factor);
+                v.z1.diag.y = -5 + (v.z1.t * v.ydiag_factor);
+                v.z1.x = (-v.z1.t*0.5 + math.sin(v.z1.t * 120) * 0.2 + v.z1.diag.x);
+                v.z2.t = q.anim_time - 2;
+                v.z2.diag.x = -2 - (v.z2.t * v.xdiag_factor);
+                v.z2.diag.y = -5 + (v.z2.t * v.ydiag_factor);
+                v.z2.x = (-v.z2.t*0.5 + math.sin(v.z2.t * 120) * 0.2 + v.z2.diag.x);
+                v.z3.t = q.anim_time - 4;
+                v.z3.diag.x = -2 - (v.z3.t * v.xdiag_factor);
+                v.z3.diag.y = -5 + (v.z3.t * v.ydiag_factor);
+                return (-v.z3.t*0.5 + math.sin(v.z3.t * 120 + 60) * 0.2 + v.z3.diag.x);
+                """);
+
+        MolangRuntime runtime = MolangRuntime.runtime()
+                .setQuery("anim_time", 5)
+                .create();
+        float result = runtime.resolve(expression);
+        System.out.println("result = " + result);
+    }
+
+    @Test
     void testCamelCase() throws MolangException {
         MolangCompiler compiler = MolangCompiler.create();
         MolangExpression loop = compiler.compile("q.testCamel");

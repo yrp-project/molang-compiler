@@ -42,21 +42,40 @@ public final class MolangLexer {
     }
 
     // Treats newlines as soft statement separators: appends ';' to the end of any
-    // non-empty line that doesn't already end on a continuation token. Preserves the
+    // non-empty line that doesn't already end on a continuation token AND is not
+    // currently inside a grouping pair (parentheses or braces). Preserves the
     // historical contract of stripping tabs and (now) newlines from the raw input.
     private static String preprocess(String input) {
         String stripped = input.replace("\r", "").replace("\t", "");
         if (stripped.indexOf('\n') < 0) {
             return stripped;
         }
-        String[] lines = stripped.split("\n", -1);
-        StringBuilder sb = new StringBuilder(stripped.length() + lines.length);
-        for (String rawLine : lines) {
-            String line = rawLine.strip();
+        StringBuilder sb = new StringBuilder(stripped.length() + 8);
+        int len = stripped.length();
+        int parenDepth = 0;
+        int braceDepth = 0;
+        int i = 0;
+        while (i < len) {
+            int lineEnd = stripped.indexOf('\n', i);
+            if (lineEnd < 0) {
+                lineEnd = len;
+            }
+            String line = stripped.substring(i, lineEnd).strip();
+            i = lineEnd + 1;
             if (line.isEmpty()) {
                 continue;
             }
             sb.append(line);
+            for (int j = 0; j < line.length(); j++) {
+                char c = line.charAt(j);
+                if (c == '(') parenDepth++;
+                else if (c == ')') parenDepth = Math.max(0, parenDepth - 1);
+                else if (c == '{') braceDepth++;
+                else if (c == '}') braceDepth = Math.max(0, braceDepth - 1);
+            }
+            if (parenDepth > 0 || braceDepth > 0) {
+                continue;
+            }
             char last = line.charAt(line.length() - 1);
             if (!isLineContinuation(last)) {
                 sb.append(';');

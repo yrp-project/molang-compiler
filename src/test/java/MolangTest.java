@@ -423,6 +423,21 @@ public class MolangTest {
     }
 
     @Test
+    void testMultilineParenExpression() throws MolangException {
+        MolangCompiler compiler = MolangCompiler.create();
+        // Newline inside parentheses must not inject ';'
+        MolangExpression expression = compiler.compile("""
+                v.x = (-q.anim_time - 4
+                       + math.sin(q.anim_time * 120) * 0.2)
+                return v.x
+                """);
+        MolangRuntime runtime = MolangRuntime.runtime().setQuery("anim_time", 0).create();
+        float result = runtime.resolve(expression);
+        // -0 - 4 + sin(0)*0.2 = -4
+        Assertions.assertEquals(-4.0F, result);
+    }
+
+    @Test
     void testNestedVariableNoSemicolons() throws MolangException {
         MolangCompiler compiler = MolangCompiler.create();
         // Exact user input: no semicolons, just newlines
